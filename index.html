@@ -714,17 +714,72 @@ function populatePatientsFromCalendar(events) {
         saturday: []
     };
     
-    events.forEach(event => {
-        if (!event.start || !event.start.dateTime) return;
+   events.forEach(event => {
+    if (!event.start || !event.start.dateTime) return;
+    
+    const eventDate = new Date(event.start.dateTime);
+    const dayOfWeek = eventDate.getDay();
+    
+    // Map day numbers to our patient days
+    const dayMapping = {
+        2: 'tuesday',    // Tuesday
+        3: 'wednesday',  // Wednesday
+        5: 'friday',     // Friday
+        6: 'saturday'    // Saturday
+    };
+    
+    const dayName = dayMapping[dayOfWeek];
+    if (dayName && eventsByDay[dayName]) {
+        eventsByDay[dayName].push(event);
+    }
+});
+        // Create patient cards for each event
+Object.keys(eventsByDay).forEach(day => {
+    eventsByDay[day].forEach((event, index) => {
+        patientCounters[day]++;
+        const patientId = `${day}-patient-${patientCounters[day]}`;
         
-        const eventDate = new Date(event.start.dateTime);
-        const dayOfWeek = eventDate.getDay();
+        const patientCard = createPatientCard(patientId, patientCounters[day]);
+        document.getElementById(`${day}-patients`).appendChild(patientCard);
         
-        // Map day numbers to our patient days
-        const dayMapping = {
-            2: 'tuesday',    // Tuesday
-            3: 'wednesday',  // Wednesday
-            5: 'friday'
+        // Pre-populate with calendar event info
+        const eventTime = new Date(event.start.dateTime).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        
+        // Add event title and time to memorable field
+        const memorableField = document.getElementById(`${patientId}-memorable`);
+        if (memorableField) {
+            memorableField.value = `${event.summary || 'Appointment'} at ${eventTime}`;
+        }
+        
+        // Try to detect visit type from event title
+        const title = (event.summary || '').toLowerCase();
+        if (title.includes('sud') || title.includes('substance')) {
+            const sudCheckbox = document.getElementById(`${patientId}-sud`);
+            if (sudCheckbox) sudCheckbox.checked = true;
+        }
+        if (title.includes('menopause') || title.includes('hormone')) {
+            const menopauseCheckbox = document.getElementById(`${patientId}-menopause`);
+            if (menopauseCheckbox) menopauseCheckbox.checked = true;
+        }
+        
+        // Detect if telehealth
+        if (title.includes('telehealth') || title.includes('virtual') || title.includes('zoom')) {
+            const telehealthCheckbox = document.getElementById(`${patientId}-telehealth`);
+            if (telehealthCheckbox) telehealthCheckbox.checked = true;
+        } else {
+            const inPersonCheckbox = document.getElementById(`${patientId}-inperson`);
+            if (inPersonCheckbox) inPersonCheckbox.checked = true;
+        }
+    });
+});
+
+saveData();
+console.log('Calendar import complete!');
+}
         document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing app...');
     checkForWeeklyReset();
