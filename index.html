@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice Homebase</title>
-<script src="https://apis.google.com/js/api.js?onload=gapiLoaded" async defer></script>
-<script src="https://accounts.google.com/gsi/client?onload=gisLoaded" async defer></script>
     <style>
         * {
             margin: 0;
@@ -406,6 +404,17 @@
             color: #6E3DA9;
         }
 
+        .calendar-note {
+            background: linear-gradient(135deg, rgba(168, 243, 227, 0.3), rgba(83, 195, 184, 0.3));
+            border: 1px solid rgba(83, 195, 184, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #2d1b69;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -448,7 +457,6 @@
             <div class="controls">
                 <button class="btn btn-secondary" onclick="exportData()">📊 Export</button>
                 <button class="btn btn-secondary" onclick="printDay()">🖨️ Print</button>
-                 <button class="btn btn-primary" onclick="handleAuthClick()" id="calendarSyncBtn" style="display:none;">📅 Sync Calendar</button>
                 <button class="btn btn-primary" onclick="clearAllData()">🔄 Reset Week</button>
             </div>
         </div>
@@ -505,6 +513,9 @@
                 <h2 class="day-title">Tuesday</h2>
                 <p class="day-type">Patient Day</p>
             </div>
+            <div class="calendar-note">
+                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
+            </div>
             <div class="patients-section">
                 <div class="section-header">
                     <h3 class="section-title">👥 Patients</h3>
@@ -519,6 +530,9 @@
             <div class="day-header">
                 <h2 class="day-title">Wednesday</h2>
                 <p class="day-type">Patient Day</p>
+            </div>
+            <div class="calendar-note">
+                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
             </div>
             <div class="patients-section">
                 <div class="section-header">
@@ -550,6 +564,9 @@
                 <h2 class="day-title">Friday</h2>
                 <p class="day-type">Patient Day</p>
             </div>
+            <div class="calendar-note">
+                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
+            </div>
             <div class="patients-section">
                 <div class="section-header">
                     <h3 class="section-title">👥 Patients</h3>
@@ -564,6 +581,9 @@
             <div class="day-header">
                 <h2 class="day-title">Saturday</h2>
                 <p class="day-type">Patient Day</p>
+            </div>
+            <div class="calendar-note">
+                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
             </div>
             <div class="patients-section">
                 <div class="section-header">
@@ -584,226 +604,19 @@
         const dayOffDays = ['sunday', 'monday', 'thursday'];
         let currentDay = 'sunday';
         let patientCounters = {};
-        // Google Calendar Integration
-const GOOGLE_API_KEY = 'AIzaSyCUFF18in3_trYTFWPvm8XqowYR4xudO54';
-const GOOGLE_CLIENT_ID = '656168979425-uk7kqvrsmisd0l7ilrr9g7vrdk5c6lvj.apps.googleusercontent.com';
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
-
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
-
 
         // Initialize counters
         patientDays.forEach(day => {
             patientCounters[day] = 0;
         });
-       // Initialize Google APIs
-async function initializeGoogleAPIs() {
-    try {
-        console.log('Starting Google API initialization...');
-        
-        // Check if gapi and google are available
-        if (typeof gapi === 'undefined') {
-            console.error('Google API (gapi) not loaded');
-            return;
-        }
-        
-        if (typeof google === 'undefined') {
-            console.error('Google GSI (google) not loaded');
-            return;
-        }
-        
-        console.log('Google APIs available, proceeding with initialization...');
-        await gapiLoaded();
-        await gisLoaded();
-        
-        console.log('Google API initialization complete!');
-    } catch (error) {
-        console.error('Error initializing Google APIs:', error);
-    }
-}
-async function gapiLoaded() {
-    await new Promise((resolve) => {
-        gapi.load('client', resolve);
-    });
-    
-    await gapi.client.init({
-        apiKey: GOOGLE_API_KEY,
-        discoveryDocs: [DISCOVERY_DOC],
-    });
-    gapiInited = true;
-    maybeEnableButtons();
-}
-
-function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // defined later
-    });
-    gisInited = true;
-    maybeEnableButtons();
-}
-
-function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
-        document.getElementById('calendarSyncBtn').style.display = 'inline-flex';
-        console.log('Google Calendar sync ready!');
-    }
-}
 
         // Initialize the app
-        function handleAuthClick() {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            console.error('Auth error:', resp);
-            alert('Authentication failed. Please try again.');
-            return;
-        }
-        await loadCalendarEvents();
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
-        tokenClient.requestAccessToken({prompt: ''});
-    }
-}
-
-async function loadCalendarEvents() {
-    try {
-        console.log('Loading calendar events...');
-        
-        // Get events for the current week
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 7);
-        
-        const request = {
-            'calendarId': 'primary',
-            'timeMin': startOfWeek.toISOString(),
-            'timeMax': endOfWeek.toISOString(),
-            'showDeleted': false,
-            'singleEvents': true,
-            'orderBy': 'startTime'
-        };
-
-        const response = await gapi.client.calendar.events.list(request);
-        const events = response.result.items;
-        
-        console.log('Found', events ? events.length : 0, 'events');
-        
-        if (events && events.length > 0) {
-            populatePatientsFromCalendar(events);
-            showAutoSaveIndicator();
-            alert(`Successfully imported ${events.length} calendar events!`);
-        } else {
-            alert('No events found for this week.');
-        }
-    } catch (err) {
-        console.error('Error loading calendar events:', err);
-        alert('Error loading calendar events. Please check your permissions and try again.');
-    }
-}
-
-function populatePatientsFromCalendar(events) {
-    console.log('Populating patients from calendar...');
-    
-    // Clear existing patients
-    patientDays.forEach(day => {
-        document.getElementById(`${day}-patients`).innerHTML = '';
-        patientCounters[day] = 0;
-    });
-
-    // Group events by day
-    const eventsByDay = {
-        tuesday: [],
-        wednesday: [],
-        friday: [],
-        saturday: []
-    };
-    
-   events.forEach(event => {
-    if (!event.start || !event.start.dateTime) return;
-    
-    const eventDate = new Date(event.start.dateTime);
-    const dayOfWeek = eventDate.getDay();
-    
-    // Map day numbers to our patient days
-    const dayMapping = {
-        2: 'tuesday',    // Tuesday
-        3: 'wednesday',  // Wednesday
-        5: 'friday',     // Friday
-        6: 'saturday'    // Saturday
-    };
-    
-    const dayName = dayMapping[dayOfWeek];
-    if (dayName && eventsByDay[dayName]) {
-        eventsByDay[dayName].push(event);
-    }
-});
-        // Create patient cards for each event
-Object.keys(eventsByDay).forEach(day => {
-    eventsByDay[day].forEach((event, index) => {
-        patientCounters[day]++;
-        const patientId = `${day}-patient-${patientCounters[day]}`;
-        
-        const patientCard = createPatientCard(patientId, patientCounters[day]);
-        document.getElementById(`${day}-patients`).appendChild(patientCard);
-        
-        // Pre-populate with calendar event info
-        const eventTime = new Date(event.start.dateTime).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-        
-        // Add event title and time to memorable field
-        const memorableField = document.getElementById(`${patientId}-memorable`);
-        if (memorableField) {
-            memorableField.value = `${event.summary || 'Appointment'} at ${eventTime}`;
-        }
-        
-        // Try to detect visit type from event title
-        const title = (event.summary || '').toLowerCase();
-        if (title.includes('sud') || title.includes('substance')) {
-            const sudCheckbox = document.getElementById(`${patientId}-sud`);
-            if (sudCheckbox) sudCheckbox.checked = true;
-        }
-        if (title.includes('menopause') || title.includes('hormone')) {
-            const menopauseCheckbox = document.getElementById(`${patientId}-menopause`);
-            if (menopauseCheckbox) menopauseCheckbox.checked = true;
-        }
-        
-        // Detect if telehealth
-        if (title.includes('telehealth') || title.includes('virtual') || title.includes('zoom')) {
-            const telehealthCheckbox = document.getElementById(`${patientId}-telehealth`);
-            if (telehealthCheckbox) telehealthCheckbox.checked = true;
-        } else {
-            const inPersonCheckbox = document.getElementById(`${patientId}-inperson`);
-            if (inPersonCheckbox) inPersonCheckbox.checked = true;
-        }
-    });
-});
-
-saveData();
-console.log('Calendar import complete!');
-}
         document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing app...');
-    checkForWeeklyReset();
-    loadAllData();
-    initializeTabs();
-    
-    // Initialize Google APIs
-    
-});
+            console.log('Initializing app...');
+            checkForWeeklyReset();
+            loadAllData();
+            initializeTabs();
+        });
 
         function initializeTabs() {
             const tabs = document.querySelectorAll('.day-tab');
@@ -813,7 +626,7 @@ console.log('Calendar import complete!');
                     switchDay(day);
                 });
             });
-            console.log('Tabs initialized');
+            console.log('Tabs initialized successfully');
         }
 
         function switchDay(day) {
@@ -1037,207 +850,3 @@ console.log('Calendar import complete!');
                     const input = item.querySelector('.todo-input');
                     
                     todos.push({
-                        id: item.id,
-                        text: input.value,
-                        completed: checkbox.checked
-                    });
-                });
-                
-                data.todos[day] = todos;
-            });
-            
-            try {
-                localStorage.setItem('practiceHomebaseData', JSON.stringify(data));
-                showAutoSaveIndicator();
-            } catch (e) {
-                console.error('Error saving data:', e);
-            }
-        }
-
-        function loadAllData() {
-            try {
-                const data = JSON.parse(localStorage.getItem('practiceHomebaseData') || '{}');
-                
-                if (data.patients) {
-                    // Load patient data
-                    patientDays.forEach(day => {
-                        const patients = data.patients[day] || [];
-                        const container = document.getElementById(`${day}-patients`);
-                        container.innerHTML = '';
-                        
-                        patients.forEach((patient, index) => {
-                            patientCounters[day] = Math.max(patientCounters[day], index + 1);
-                            const card = createPatientCard(patient.id, index + 1);
-                            container.appendChild(card);
-                            
-                            // Restore form data
-                            Object.keys(patient.data).forEach(inputId => {
-                                const input = document.getElementById(inputId);
-                                if (input) {
-                                    if (input.type === 'checkbox') {
-                                        input.checked = patient.data[inputId];
-                                    } else {
-                                        input.value = patient.data[inputId];
-                                    }
-                                }
-                            });
-                        });
-                    });
-                }
-                
-                if (data.todos) {
-                    // Load todo data
-                    [...patientDays, ...dayOffDays].forEach(day => {
-                        const todos = data.todos[day] || [];
-                        const container = document.getElementById(`${day}-todos`);
-                        container.innerHTML = '';
-                        
-                        todos.forEach(todo => {
-                            const todoItem = document.createElement('div');
-                            todoItem.className = 'todo-item';
-                            todoItem.id = todo.id;
-                            todoItem.innerHTML = `
-                                <input type="checkbox" class="todo-checkbox" onchange="toggleTodo('${todo.id}')" ${todo.completed ? 'checked' : ''}>
-                                <input type="text" class="todo-input ${todo.completed ? 'completed' : ''}" value="${todo.text}" oninput="saveData()">
-                                <button class="remove-patient" onclick="removeTodo('${todo.id}')">×</button>
-                            `;
-                            container.appendChild(todoItem);
-                        });
-                    });
-                }
-            } catch (e) {
-                console.error('Error loading data:', e);
-            }
-        }
-
-        function checkForWeeklyReset() {
-            const lastReset = localStorage.getItem('practiceHomebaseLastReset');
-            const now = new Date();
-            const currentSunday = new Date(now);
-            currentSunday.setDate(now.getDate() - now.getDay());
-            currentSunday.setHours(0, 0, 0, 0);
-            
-            if (!lastReset || new Date(lastReset) < currentSunday) {
-                localStorage.removeItem('practiceHomebaseData');
-                localStorage.setItem('practiceHomebaseLastReset', currentSunday.toISOString());
-                
-                // Reset counters
-                patientDays.forEach(day => {
-                    patientCounters[day] = 0;
-                });
-            }
-        }
-
-        function showAutoSaveIndicator() {
-            const indicator = document.getElementById('autoSaveIndicator');
-            indicator.classList.add('show');
-            
-            setTimeout(() => {
-                indicator.classList.remove('show');
-            }, 2000);
-        }
-
-        function exportData() {
-            const data = JSON.parse(localStorage.getItem('practiceHomebaseData') || '{}');
-            const exportData = {
-                ...data,
-                exportDate: new Date().toISOString(),
-                weekOf: getWeekOf()
-            };
-            
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `practice-homebase-${getWeekOf()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function getWeekOf() {
-            const now = new Date();
-            const sunday = new Date(now);
-            sunday.setDate(now.getDate() - now.getDay());
-            return sunday.toISOString().split('T')[0];
-        }
-
-        function printDay() {
-            window.print();
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to reset all data for this week? This cannot be undone.')) {
-                localStorage.removeItem('practiceHomebaseData');
-                
-                // Reset counters
-                patientDays.forEach(day => {
-                    patientCounters[day] = 0;
-                });
-                
-                // Clear all patient containers
-                patientDays.forEach(day => {
-                    document.getElementById(`${day}-patients`).innerHTML = '';
-                });
-                
-                // Clear all todo containers
-                [...patientDays, ...dayOffDays].forEach(day => {
-                    document.getElementById(`${day}-todos`).innerHTML = '';
-                });
-                
-                showAutoSaveIndicator();
-            }
-        }
-
-        // Print styles
-        const printStyles = `
-            <style media="print">
-                .header, .week-nav, .controls, .add-patient-btn, .add-todo, .remove-patient {
-                    display: none !important;
-                }
-                
-                .day-content:not(.active) {
-                    display: none !important;
-                }
-                
-                .day-content.active {
-                    display: block !important;
-                }
-                
-                body {
-                    background: white !important;
-                    color: black !important;
-                }
-                
-                .patient-card, .todo-section, .patients-section {
-                    background: white !important;
-                    border: 1px solid #ccc !important;
-                    box-shadow: none !important;
-                }
-                
-                .day-title {
-                    color: #333 !important;
-                }
-                
-                .section-title {
-                    color: #333 !important;
-                }
-                
-                .auto-save-indicator, .reset-notice {
-                    display: none !important;
-                }
-                
-                @page {
-                    margin: 0.5in;
-                }
-            </style>
-        `;
-        
-        document.head.insertAdjacentHTML('beforeend', printStyles);
-
-        // Auto-save on page unload
-        window.addEventListener('beforeunload', saveData);
-    </script>
-</body>
-</html>
