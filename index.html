@@ -726,11 +726,14 @@ function populatePatientsFromCalendar(events) {
             3: 'wednesday',  // Wednesday
             5: 'friday'
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing app...');
-            checkForWeeklyReset();
-            loadAllData();
-            initializeTabs();
-        });
+    console.log('Initializing app...');
+    checkForWeeklyReset();
+    loadAllData();
+    initializeTabs();
+    
+    // Initialize Google APIs
+    initializeGoogleAPIs().catch(console.error);
+});
 
         function initializeTabs() {
             const tabs = document.querySelectorAll('.day-tab');
