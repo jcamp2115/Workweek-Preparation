@@ -584,11 +584,60 @@
         const dayOffDays = ['sunday', 'monday', 'thursday'];
         let currentDay = 'sunday';
         let patientCounters = {};
+        // Google Calendar Integration
+const GOOGLE_API_KEY = 'AIzaSyCUFF18in3_trYTFWPvm8XqowYR4xudO54';
+const GOOGLE_CLIENT_ID = '656168979425-uk7kqvrsmisd0l7ilrr9g7vrdk5c6lvj.apps.googleusercontent.com';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+
+let tokenClient;
+let gapiInited = false;
+let gisInited = false;
+
 
         // Initialize counters
         patientDays.forEach(day => {
             patientCounters[day] = 0;
         });
+        // Initialize Google APIs
+async function initializeGoogleAPIs() {
+    try {
+        await gapiLoaded();
+        await gisLoaded();
+    } catch (error) {
+        console.error('Error initializing Google APIs:', error);
+    }
+}
+
+async function gapiLoaded() {
+    await new Promise((resolve) => {
+        gapi.load('client', resolve);
+    });
+    
+    await gapi.client.init({
+        apiKey: GOOGLE_API_KEY,
+        discoveryDocs: [DISCOVERY_DOC],
+    });
+    gapiInited = true;
+    maybeEnableButtons();
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: SCOPES,
+        callback: '', // defined later
+    });
+    gisInited = true;
+    maybeEnableButtons();
+}
+
+function maybeEnableButtons() {
+    if (gapiInited && gisInited) {
+        document.getElementById('calendarSyncBtn').style.display = 'inline-flex';
+        console.log('Google Calendar sync ready!');
+    }
+}
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
