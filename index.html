@@ -404,17 +404,6 @@
             color: #6E3DA9;
         }
 
-        .calendar-note {
-            background: linear-gradient(135deg, rgba(168, 243, 227, 0.3), rgba(83, 195, 184, 0.3));
-            border: 1px solid rgba(83, 195, 184, 0.3);
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            text-align: center;
-            color: #2d1b69;
-            font-size: 0.9rem;
-        }
-
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -513,9 +502,6 @@
                 <h2 class="day-title">Tuesday</h2>
                 <p class="day-type">Patient Day</p>
             </div>
-            <div class="calendar-note">
-                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
-            </div>
             <div class="patients-section">
                 <div class="section-header">
                     <h3 class="section-title">👥 Patients</h3>
@@ -530,9 +516,6 @@
             <div class="day-header">
                 <h2 class="day-title">Wednesday</h2>
                 <p class="day-type">Patient Day</p>
-            </div>
-            <div class="calendar-note">
-                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
             </div>
             <div class="patients-section">
                 <div class="section-header">
@@ -564,9 +547,6 @@
                 <h2 class="day-title">Friday</h2>
                 <p class="day-type">Patient Day</p>
             </div>
-            <div class="calendar-note">
-                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
-            </div>
             <div class="patients-section">
                 <div class="section-header">
                     <h3 class="section-title">👥 Patients</h3>
@@ -581,9 +561,6 @@
             <div class="day-header">
                 <h2 class="day-title">Saturday</h2>
                 <p class="day-type">Patient Day</p>
-            </div>
-            <div class="calendar-note">
-                📅 <strong>Pro tip:</strong> You can manually add patients here, or copy appointment details from your Google Calendar
             </div>
             <div class="patients-section">
                 <div class="section-header">
@@ -626,7 +603,7 @@
                     switchDay(day);
                 });
             });
-            console.log('Tabs initialized successfully');
+            console.log('Tabs initialized');
         }
 
         function switchDay(day) {
@@ -850,3 +827,207 @@
                     const input = item.querySelector('.todo-input');
                     
                     todos.push({
+                        id: item.id,
+                        text: input.value,
+                        completed: checkbox.checked
+                    });
+                });
+                
+                data.todos[day] = todos;
+            });
+            
+            try {
+                localStorage.setItem('practiceHomebaseData', JSON.stringify(data));
+                showAutoSaveIndicator();
+            } catch (e) {
+                console.error('Error saving data:', e);
+            }
+        }
+
+        function loadAllData() {
+            try {
+                const data = JSON.parse(localStorage.getItem('practiceHomebaseData') || '{}');
+                
+                if (data.patients) {
+                    // Load patient data
+                    patientDays.forEach(day => {
+                        const patients = data.patients[day] || [];
+                        const container = document.getElementById(`${day}-patients`);
+                        container.innerHTML = '';
+                        
+                        patients.forEach((patient, index) => {
+                            patientCounters[day] = Math.max(patientCounters[day], index + 1);
+                            const card = createPatientCard(patient.id, index + 1);
+                            container.appendChild(card);
+                            
+                            // Restore form data
+                            Object.keys(patient.data).forEach(inputId => {
+                                const input = document.getElementById(inputId);
+                                if (input) {
+                                    if (input.type === 'checkbox') {
+                                        input.checked = patient.data[inputId];
+                                    } else {
+                                        input.value = patient.data[inputId];
+                                    }
+                                }
+                            });
+                        });
+                    });
+                }
+                
+                if (data.todos) {
+                    // Load todo data
+                    [...patientDays, ...dayOffDays].forEach(day => {
+                        const todos = data.todos[day] || [];
+                        const container = document.getElementById(`${day}-todos`);
+                        container.innerHTML = '';
+                        
+                        todos.forEach(todo => {
+                            const todoItem = document.createElement('div');
+                            todoItem.className = 'todo-item';
+                            todoItem.id = todo.id;
+                            todoItem.innerHTML = `
+                                <input type="checkbox" class="todo-checkbox" onchange="toggleTodo('${todo.id}')" ${todo.completed ? 'checked' : ''}>
+                                <input type="text" class="todo-input ${todo.completed ? 'completed' : ''}" value="${todo.text}" oninput="saveData()">
+                                <button class="remove-patient" onclick="removeTodo('${todo.id}')">×</button>
+                            `;
+                            container.appendChild(todoItem);
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading data:', e);
+            }
+        }
+
+        function checkForWeeklyReset() {
+            const lastReset = localStorage.getItem('practiceHomebaseLastReset');
+            const now = new Date();
+            const currentSunday = new Date(now);
+            currentSunday.setDate(now.getDate() - now.getDay());
+            currentSunday.setHours(0, 0, 0, 0);
+            
+            if (!lastReset || new Date(lastReset) < currentSunday) {
+                localStorage.removeItem('practiceHomebaseData');
+                localStorage.setItem('practiceHomebaseLastReset', currentSunday.toISOString());
+                
+                // Reset counters
+                patientDays.forEach(day => {
+                    patientCounters[day] = 0;
+                });
+            }
+        }
+
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.classList.add('show');
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        function exportData() {
+            const data = JSON.parse(localStorage.getItem('practiceHomebaseData') || '{}');
+            const exportData = {
+                ...data,
+                exportDate: new Date().toISOString(),
+                weekOf: getWeekOf()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `practice-homebase-${getWeekOf()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function getWeekOf() {
+            const now = new Date();
+            const sunday = new Date(now);
+            sunday.setDate(now.getDate() - now.getDay());
+            return sunday.toISOString().split('T')[0];
+        }
+
+        function printDay() {
+            window.print();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to reset all data for this week? This cannot be undone.')) {
+                localStorage.removeItem('practiceHomebaseData');
+                
+                // Reset counters
+                patientDays.forEach(day => {
+                    patientCounters[day] = 0;
+                });
+                
+                // Clear all patient containers
+                patientDays.forEach(day => {
+                    document.getElementById(`${day}-patients`).innerHTML = '';
+                });
+                
+                // Clear all todo containers
+                [...patientDays, ...dayOffDays].forEach(day => {
+                    document.getElementById(`${day}-todos`).innerHTML = '';
+                });
+                
+                showAutoSaveIndicator();
+            }
+        }
+
+        // Print styles
+        const printStyles = `
+            <style media="print">
+                .header, .week-nav, .controls, .add-patient-btn, .add-todo, .remove-patient {
+                    display: none !important;
+                }
+                
+                .day-content:not(.active) {
+                    display: none !important;
+                }
+                
+                .day-content.active {
+                    display: block !important;
+                }
+                
+                body {
+                    background: white !important;
+                    color: black !important;
+                }
+                
+                .patient-card, .todo-section, .patients-section {
+                    background: white !important;
+                    border: 1px solid #ccc !important;
+                    box-shadow: none !important;
+                }
+                
+                .day-title {
+                    color: #333 !important;
+                }
+                
+                .section-title {
+                    color: #333 !important;
+                }
+                
+                .auto-save-indicator, .reset-notice {
+                    display: none !important;
+                }
+                
+                @page {
+                    margin: 0.5in;
+                }
+            </style>
+        `;
+        
+        document.head.insertAdjacentHTML('beforeend', printStyles);
+
+        // Auto-save on page unload
+        window.addEventListener('beforeunload', saveData);
+    </script>
+</body>
+</html>
