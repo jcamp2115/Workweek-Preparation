@@ -640,6 +640,91 @@ function maybeEnableButtons() {
 }
 
         // Initialize the app
+        function handleAuthClick() {
+    tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+            console.error('Auth error:', resp);
+            alert('Authentication failed. Please try again.');
+            return;
+        }
+        await loadCalendarEvents();
+    };
+
+    if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+    } else {
+        tokenClient.requestAccessToken({prompt: ''});
+    }
+}
+
+async function loadCalendarEvents() {
+    try {
+        console.log('Loading calendar events...');
+        
+        // Get events for the current week
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 7);
+        
+        const request = {
+            'calendarId': 'primary',
+            'timeMin': startOfWeek.toISOString(),
+            'timeMax': endOfWeek.toISOString(),
+            'showDeleted': false,
+            'singleEvents': true,
+            'orderBy': 'startTime'
+        };
+
+        const response = await gapi.client.calendar.events.list(request);
+        const events = response.result.items;
+        
+        console.log('Found', events ? events.length : 0, 'events');
+        
+        if (events && events.length > 0) {
+            populatePatientsFromCalendar(events);
+            showAutoSaveIndicator();
+            alert(`Successfully imported ${events.length} calendar events!`);
+        } else {
+            alert('No events found for this week.');
+        }
+    } catch (err) {
+        console.error('Error loading calendar events:', err);
+        alert('Error loading calendar events. Please check your permissions and try again.');
+    }
+}
+
+function populatePatientsFromCalendar(events) {
+    console.log('Populating patients from calendar...');
+    
+    // Clear existing patients
+    patientDays.forEach(day => {
+        document.getElementById(`${day}-patients`).innerHTML = '';
+        patientCounters[day] = 0;
+    });
+
+    // Group events by day
+    const eventsByDay = {
+        tuesday: [],
+        wednesday: [],
+        friday: [],
+        saturday: []
+    };
+    
+    events.forEach(event => {
+        if (!event.start || !event.start.dateTime) return;
+        
+        const eventDate = new Date(event.start.dateTime);
+        const dayOfWeek = eventDate.getDay();
+        
+        // Map day numbers to our patient days
+        const dayMapping = {
+            2: 'tuesday',    // Tuesday
+            3: 'wednesday',  // Wednesday
+            5: 'friday'
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Initializing app...');
             checkForWeeklyReset();
