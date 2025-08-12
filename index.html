@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice Homebase</title>
-    <script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
             margin: 0;
@@ -599,16 +599,31 @@ let gisInited = false;
         patientDays.forEach(day => {
             patientCounters[day] = 0;
         });
-        // Initialize Google APIs
+       // Initialize Google APIs
 async function initializeGoogleAPIs() {
     try {
+        console.log('Starting Google API initialization...');
+        
+        // Check if gapi and google are available
+        if (typeof gapi === 'undefined') {
+            console.error('Google API (gapi) not loaded');
+            return;
+        }
+        
+        if (typeof google === 'undefined') {
+            console.error('Google GSI (google) not loaded');
+            return;
+        }
+        
+        console.log('Google APIs available, proceeding with initialization...');
         await gapiLoaded();
         await gisLoaded();
+        
+        console.log('Google API initialization complete!');
     } catch (error) {
         console.error('Error initializing Google APIs:', error);
     }
 }
-
 async function gapiLoaded() {
     await new Promise((resolve) => {
         gapi.load('client', resolve);
